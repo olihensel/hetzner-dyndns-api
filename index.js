@@ -16,8 +16,6 @@ const HETZNER_API_URL = 'https://dns.hetzner.com/api/v1';
 async function handleDnsRequest(ipAddress, zoneId, recordName, apiToken, res) {
   // Verify the API token with environment variable
   const envZoneId = process.env[`API_TOKEN_ZONE_${apiToken}`];
-  // FIXME: remove
-  console.log(process.env);
   if (!envZoneId || envZoneId !== zoneId) {
     return res.status(403).send('Invalid API token for the given zone ID');
   }

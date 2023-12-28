@@ -22,9 +22,9 @@ The application requires a [`.env`](./.env) file in the root directory of the pr
 
 - `API_TOKEN_ZONE_<apiToken>`: For each API token you want to use, you should define an environment variable that corresponds to the zone IDs that the token can update. Replace `<apiToken>` with the actual API token
 
-- `LETSENCRYPT_DOMAIN`
+- `LETSENCRYPT_DOMAIN`: The domain for which to request a Let's Encrypt certificate.
 
-- `LETSENCRYPT_EMAIL`
+- `LETSENCRYPT_EMAIL`: The email address to use when requesting a Let's Encrypt certificate.
 
 ### Starting the Application
 
@@ -38,7 +38,7 @@ This starts the Express server on port 3000.
 
 ### Docker Deployment
 
-The application can also be deployed using Docker. The provided [`Dockerfile`](./Dockerfile) and [`docker-compose.yaml`](./docker-compose.yaml) files can be used to build and run the application as a Docker container. The Docker container exposes the application on port 3000.
+The application can also be deployed using Docker. The provided [`Dockerfile`](./Dockerfile) and [`docker-compose.yaml`](./docker-compose.yaml) files can be used to build and run the application as a Docker container. The Traefik Reverse Proxy uses DNS-01 Challenge to create a TLS certificate. The API is exposed via TLS on port 9999.
 
 To build and start the Docker container, run the following command:
 
@@ -46,6 +46,15 @@ To build and start the Docker container, run the following command:
 docker-compose up --build
 ```
 
-### Traefik Configuration
+## Usage
 
-The application is configured to work with Traefik as a reverse proxy. The [`traefik.yml`](./traefik.yml) file contains the configuration for Traefik. The [`docker-compose.yaml`](./docker-compose.yaml) file includes labels for Traefik to route requests to the application.
+```
+curl https://HOST:9999/update-dns?ipAddress=`curl http://ipecho.net/plain`&zoneId=somehetznerzoneid&recordName=somehost&apiToken=sometoken
+```
+
+NOTE: to get the zone ids in hetzner consult hetzner documentation. On time of writing you can use the following curl:
+
+```
+curl "https://dns.hetzner.com/api/v1/zones" \
+     -H "Auth-API-Token: ${HETZNER_API_TOKEN}" | jq
+```
