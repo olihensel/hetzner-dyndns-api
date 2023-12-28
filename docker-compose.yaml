@@ -14,6 +14,7 @@ services:
 
   reverse-proxy:
     image: traefik:v2.5
+    restart: always
     command:
       - "--providers.docker=true"
       - "--entrypoints.websecure.address=:9999"
