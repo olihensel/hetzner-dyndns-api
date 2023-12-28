@@ -17,7 +17,9 @@ services:
     image: traefik:v2.10
     restart: always
     command:
+      - "--log.level=DEBUG"
       - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.websecure.address=:9999"
       - "--certificatesresolvers.myresolver.acme.dnschallenge=true"
       - "--certificatesresolvers.myresolver.acme.dnschallenge.provider=hetzner"
@@ -27,8 +29,7 @@ services:
       - "9999:9999"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
-      - "./letsencrypt:/letsencrypt/"
-      - "./traefik.yml:/traefik.yml"
+      - "./letsencrypt:/letsencrypt"
     environment:
       - HETZNER_API_KEY=${HETZNER_API_KEY}
     networks:
