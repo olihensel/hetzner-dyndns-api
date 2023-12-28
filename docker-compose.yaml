@@ -4,6 +4,7 @@ services:
   app:
     build: .
     restart: always
+    env_file: .env
     networks:
       - web
     labels:
@@ -13,7 +14,7 @@ services:
       - "traefik.http.services.app.loadbalancer.server.port=3000"
 
   reverse-proxy:
-    image: traefik:v2.5
+    image: traefik:v2.10
     restart: always
     command:
       - "--providers.docker=true"
@@ -26,10 +27,10 @@ services:
       - "9999:9999"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
-      - "./acme.json:/acme.json"
+      - "./letsencrypt:/letsencrypt/"
       - "./traefik.yml:/traefik.yml"
     environment:
-      - HETZNER_API_TOKEN=${HETZNER_API_KEY}
+      - HETZNER_API_KEY=${HETZNER_API_KEY}
     networks:
       - web
 
