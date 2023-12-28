@@ -1,0 +1,37 @@
+version: "3"
+
+services:
+  app:
+    build: .
+    restart: always
+    networks:
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app.rule=Host(`${LETSENCRYPT_DOMAIN}`)"
+      - "traefik.http.routers.app.tls.certresolver=myresolver"
+      - "traefik.http.services.app.loadbalancer.server.port=3000"
+
+  reverse-proxy:
+    image: traefik:v2.5
+    command:
+      - "--providers.docker=true"
+      - "--entrypoints.websecure.address=:9999"
+      - "--certificatesresolvers.myresolver.acme.dnschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.dnschallenge.provider=hetzner"
+      - "--certificatesresolvers.myresolver.acme.email=${LETSENCRYPT_EMAIL}"
+      - "--certificatesresolvers.myresolver.acme.storage=/acme.json"
+    ports:
+      - "9999:9999"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./acme.json:/acme.json"
+      - "./traefik.yml:/traefik.yml"
+    environment:
+      - HETZNER_API_TOKEN=${HETZNER_API_KEY}
+    networks:
+      - web
+
+networks:
+  web:
+    external: true
