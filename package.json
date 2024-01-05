@@ -13,13 +13,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/olihensel/hetzner-dyndns-forreal.git"
+    "url": "git+https://github.com/olihensel/hetzner-dyndns-api.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/olihensel/hetzner-dyndns-forreal/issues"
+    "url": "https://github.com/olihensel/hetzner-dyndns-api/issues"
   },
-  "homepage": "https://github.com/olihensel/hetzner-dyndns-forreal#readme",
+  "homepage": "https://github.com/olihensel/hetzner-dyndns-api#readme",
   "description": ""
 }
