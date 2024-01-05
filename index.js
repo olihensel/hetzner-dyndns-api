@@ -30,13 +30,12 @@ async function handleDnsRequest(ipAddress, zoneId, recordName, apiToken, res) {
     );
 
     const records = recordsResponse.data.records;
-    console.log(records)
     const existingRecord = records.find(record => record.name === recordName);
 
     const recordData = {
       value: ipAddress,
-      type: 'A', // Assuming an 'A' record, change as needed
-      ttl: 30, // TTL set to 30 seconds
+      type: 'A',
+      ttl: 30,
       name: recordName,
       zone_id: zoneId,
     };
