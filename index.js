@@ -6,12 +6,14 @@ const app = express();
 
 app.use(express.json());
 
-const HETZNER_DNS_API_TOKEN = process.env.HETZNER_API_KEY;
-if (!HETZNER_DNS_API_TOKEN) {
+
+const HETZNER_CLOUD_API_TOKEN = process.env.HETZNER_API_KEY;
+if (!HETZNER_CLOUD_API_TOKEN) {
   throw new Error('HETZNER_API_KEY environment variable is required');
 }
 
-const HETZNER_API_URL = 'https://dns.hetzner.com/api/v1';
+const HETZNER_API_URL = 'https://api.hetzner.cloud/v1';
+
 
 async function handleDnsRequest(ipAddress, zoneId, recordName, apiToken, res) {
   // Verify the API token with environment variable
@@ -20,62 +22,96 @@ async function handleDnsRequest(ipAddress, zoneId, recordName, apiToken, res) {
     return res.status(403).send('Invalid API token for the given zone ID');
   }
 
+  // Namenskonventionen: lowercase, Apex = @
+  let rrsetName = recordName.trim().toLowerCase();
+  if (rrsetName === '' || rrsetName === '@') {
+    rrsetName = '@';
+  }
+
+  // TTL mindestens 60
+  let ttl = 60;
+  if (process.env.DEFAULT_TTL && Number(process.env.DEFAULT_TTL) >= 60) {
+    ttl = Number(process.env.DEFAULT_TTL);
+  }
+
   try {
-    // Fetch all DNS records of the specified zone
-    const recordsResponse = await axios.get(
-      `${HETZNER_API_URL}/records?zone_id=${zoneId}`,
+    // Hole bestehendes RRSet
+    let rrsetResp = null;
+    let rrsetExists = false;
+    try {
+      rrsetResp = await axios.get(
+        `${HETZNER_API_URL}/zones/${zoneId}/rrsets/${encodeURIComponent(rrsetName)}/A`,
+        {
+          headers: { 'Authorization': `Bearer ${HETZNER_CLOUD_API_TOKEN}` }
+        }
+      );
+      rrsetExists = true;
+    } catch (e) {
+      if (!(e.response && e.response.status === 404)) throw e;
+    }
+
+    if (!rrsetExists) {
+      // RRSet existiert nicht, lege es an
+      await axios.post(
+        `${HETZNER_API_URL}/zones/${zoneId}/rrsets`,
+        {
+          name: rrsetName,
+          type: 'A',
+          ttl: ttl,
+          records: [
+            {
+              value: ipAddress
+            }
+          ]
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${HETZNER_CLOUD_API_TOKEN}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      return res.send(`New DNS RRSet created with IP address ${ipAddress} for ${rrsetName}`);
+    }
+
+    let currentRecords = [];
+    if (rrsetResp && rrsetResp.data && rrsetResp.data.rrset) {
+      currentRecords = rrsetResp.data.rrset.records;
+      // Prüfe, ob IP bereits gesetzt ist
+      if (currentRecords.length === 1 && currentRecords[0].value === ipAddress) {
+        return res.status(200).send(`Not Modified - ${ipAddress} already set for ${rrsetName}`);
+      }
+    }
+
+    // set_records überschreibt alle Records im RRSet
+    const setRecordsPayload = {
+      records: [
+        {
+          value: ipAddress,
+          ttl: ttl
+        }
+      ]
+    };
+
+    await axios.post(
+      `${HETZNER_API_URL}/zones/${zoneId}/rrsets/${encodeURIComponent(rrsetName)}/A/actions/set_records`,
+      setRecordsPayload,
       {
-        headers: { 'Auth-API-Token': HETZNER_DNS_API_TOKEN }
+        headers: {
+          'Authorization': `Bearer ${HETZNER_CLOUD_API_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
       }
     );
 
-    const records = recordsResponse.data.records;
-    const existingRecord = records.find(record => record.name === recordName);
-
-    const recordData = {
-      value: ipAddress,
-      type: 'A',
-      ttl: 30,
-      name: recordName,
-      zone_id: zoneId,
-    };
-
-    // Handle record existence and IP address comparison  
-    if (existingRecord) {
-      if (existingRecord.value === ipAddress) {
-        return res.status(200).send(`Not Modified - ${ipAddress} already set for ${recordName}`);
-      }
-      await axios.put(
-        `${HETZNER_API_URL}/records/${existingRecord.id}`,
-        recordData,
-        {
-          headers: {
-            'Auth-API-Token': HETZNER_DNS_API_TOKEN,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-      return res.send(`DNS record updated with new IP address ${ipAddress} for ${recordName}`);
-    } else {
-      await axios.post(
-        `${HETZNER_API_URL}/records`,
-        recordData,
-        {
-          headers: {
-            'Auth-API-Token': HETZNER_DNS_API_TOKEN,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-      return res.send(`New DNS record created with IP address ${ipAddress} for ${recordName}`);
-    }
+    return res.send(`DNS RRSet updated with new IP address ${ipAddress} for ${rrsetName}`);
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      console.error('Error handling DNS record:', error.response?.data, error.response?.status);
+      console.error('Error handling DNS RRSet:', JSON.stringify(error.response?.data, null, 2), error.response?.status);
       console.log('Request config:', error.config);
     }
-    else { console.error('Error handling DNS record:', error); }
-    res.status(500).send('Failed to handle DNS record');
+    else { console.error('Error handling DNS RRSet:', error); }
+    res.status(500).send('Failed to handle DNS RRSet');
   }
 }
 
