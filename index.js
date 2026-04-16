@@ -16,6 +16,12 @@ const HETZNER_API_URL = 'https://api.hetzner.cloud/v1';
 
 
 async function handleDnsRequest(ipAddress, zoneId, recordName, apiToken, res) {
+  // Legacy zoneId Mapping via ENV
+  const mappedZoneId = process.env[`OLD_ZONEID_${zoneId}`];
+  if (mappedZoneId) {
+    zoneId = mappedZoneId;
+  }
+
   // Verify the API token with environment variable
   const envZoneId = process.env[`API_TOKEN_ZONE_${apiToken}`];
   if (!envZoneId || envZoneId !== zoneId) {
