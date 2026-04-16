@@ -1,6 +1,6 @@
 # Hetzner DynDNS Proxy
 
-This project hosts an API that can be utilized to update DNS records on Hetzner via an Express server.
+This project hosts an *vibe coded* API that can be utilized to update DNS records on Hetzner via an Express server.
 
 ### index.js
 
